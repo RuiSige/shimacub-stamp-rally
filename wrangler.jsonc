@@ -1,17 +1,11 @@
-
 {
   "name": "shimacub-stamp-rally",
   "main": "src/index.js",
   "compatibility_date": "2026-10-29",
-"assets": {
-  "directory": "./public",
-  "binding": "ASSETS"
-},
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "shimacub-stamp-db",
-      "database_id": "7bdd376e-365e-44f2-97b7-ebb8999ab053"
-    }
-  ]
+  "assets": {"directory": "./public", "binding": "ASSETS"},
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "shimacub-stamp-db",
+    "database_id": "7bdd376e-365e-44f2-97b7-ebb8999ab053"
+  }]
 }
