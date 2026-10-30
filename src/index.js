@@ -7,7 +7,7 @@ const token=()=>crypto.randomUUID()+'.'+crypto.randomUUID();
 async function body(req){try{return await req.json()}catch{return {}}}
 async function user(req,db){const t=(req.headers.get('Authorization')||'').replace(/^Bearer /,'');if(!t)return null;return db.prepare('SELECT id,nickname FROM participants WHERE session_token_hash=?').bind(await hash(t)).first()}
 const shops=db=>db.prepare('SELECT id,name,sort_order FROM shops WHERE active=1 ORDER BY sort_order,id').all();
-async function state(db,u){const s=(await shops(db)).results;const rows=(await db.prepare('SELECT shop_id FROM stamps WHERE participant_id=?').bind(u.id).all()).results;return {nickname:u.nickname,shops:s,stamps:rows.map(x=>x.shop_id)}}
+async function state(db,u){const s=(await shops(db)).results;const rows=(await db.prepare('SELECT shop_id FROM stamps WHERE participant_id=?').bind(u.id).all()).results;const reward=await db.prepare("SELECT 1 AS redeemed FROM rewards WHERE participant_id=? AND reward_type='three'").bind(u.id).first();return {participant_id:u.id,nickname:u.nickname,shops:s,stamps:rows.map(x=>x.shop_id),sticker_redeemed:!!reward}}
 async function admin(req,env){const key=req.headers.get('X-Admin-Key')||'';if(!env.ADMIN_KEY||key.length<24||key!==env.ADMIN_KEY)return err('管理者認証に失敗しました',403);return null}
 export default {async fetch(req,env){
  const url=new URL(req.url),p=url.pathname,db=env.DB;
@@ -53,8 +53,9 @@ export default {async fetch(req,env){
   if(!['three','all'].includes(type))return err('特典の種類が不正です');
   const n=(await db.prepare('SELECT COUNT(*) n FROM stamps WHERE participant_id=?').bind(id).first()).n;
   const total=(await db.prepare('SELECT COUNT(*) n FROM shops WHERE active=1').first()).n;
+  if(!await db.prepare('SELECT 1 FROM participants WHERE id=?').bind(id).first())return err('参加者が見つかりません',404);
   if(n<(type==='three'?3:total)||!total)return err('達成条件を満たしていません');
-  await db.prepare('INSERT OR IGNORE INTO rewards(participant_id,reward_type) VALUES(?,?)').bind(id,type).run();return json({ok:true});
+  const result=await db.prepare('INSERT OR IGNORE INTO rewards(participant_id,reward_type) VALUES(?,?)').bind(id,type).run();return json({ok:true,already_redeemed:result.meta.changes===0});
  }
  const u=await user(req,db);if(!u)return err('参加情報が見つかりません。復元コードを利用してください',401);
  if(p==='/api/me'&&req.method==='GET')return json(await state(db,u));
